@@ -7,8 +7,8 @@ function Dashboard({ username, onLogout }) {
     return (
         <div className="position-relative">
             <Header onLogout={onLogout} username={username}/>
-            <Aside />
-            <Main/>
+            <Aside/>
+            <Main />
         </div>
     )
 }

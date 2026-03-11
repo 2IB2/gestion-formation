@@ -37,8 +37,8 @@ export default function Login({ onLogin }) {
 
         setError("")
 
-        // save session
-        localStorage.setItem("user", JSON.stringify(user))
+        if(rememberMe)
+            localStorage.setItem("user", JSON.stringify(user))
 
         onLogin(user)
     }
