@@ -1,4 +1,5 @@
 import { useState, useId } from "react"
+import { useNavigate } from "react-router-dom"
 
 const USERS = [
     { username: "admin", password: "admin123", role: "admin" },
@@ -9,6 +10,8 @@ export default function Login({ onLogin }) {
 
     const usernameId = useId()
     const passwordId = useId()
+
+    const navigate = useNavigate()
 
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
@@ -41,6 +44,7 @@ export default function Login({ onLogin }) {
             localStorage.setItem("user", JSON.stringify(user))
 
         onLogin(user)
+        navigate('/dashboard')
     }
 
     return (

@@ -1,28 +1,65 @@
-export default function Main(){
-    return(
-        <main className='main position-fixed w-75 p-4' style={{
-            top: "40px",
-            right: "100px",
-            height: "calc(100vh - 100px)"
-        }}>
-                <h1 className='text-center pt-5'>Welcome to the Dashboard</h1>
-                <div className="bbor d-flex  justify-content-around mt-5">
-                    <div className="bor border p-4 m-3 shadow rounded">
-                        <h4>Formation</h4>
-                        <img src="" alt="formation.icon"/>
-                        <p>nombre des formations: </p>
-                    </div>
-                    <div className="bor border p-4 m-3 shadow rounded ">
-                        <h4>Formateur</h4>
-                        <img src="" alt="formateur.icon"/>
-                        <p className=''>nombre des formateurs: </p>
-                    </div>
-                    <div className="bor border p-4 m-3 shadow rounded">
-                        <h4>Formation</h4>
-                        <img src="" alt="formation.icon"/>
-                        <p>total des formations active: </p>
-                    </div>
+export default function Main() {
+    return (
+        <main className="main">
+
+            <h2 className="dashboard-title">Dashboard</h2>
+
+            <div className="cards">
+
+                <div className="card">
+                    <h3>Total Formations</h3>
+                    <p>12</p>
                 </div>
+
+                <div className="card">
+                    <h3>Active Formations</h3>
+                    <p>5</p>
+                </div>
+
+                <div className="card">
+                    <h3>Users</h3>
+                    <p>24</p>
+                </div>
+
+                <div className="card">
+                    <h3>Upcoming</h3>
+                    <p>3</p>
+                </div>
+
+            </div>
+
+            <div className="recent">
+                <h3>Recent Formations</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Duration</th>
+                            <th>Start</th>
+                            <th>End</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td>React</td>
+                            <td>20h</td>
+                            <td>01/03/2026</td>
+                            <td>10/03/2026</td>
+                        </tr>
+
+                        <tr>
+                            <td>Laravel</td>
+                            <td>18h</td>
+                            <td>12/03/2026</td>
+                            <td>20/03/2026</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+
         </main>
     )
 }

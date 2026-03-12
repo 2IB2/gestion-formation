@@ -1,33 +1,29 @@
-import "../styles/dashboard.css"
+import { NavLink } from "react-router-dom";
 
-import { Link } from "react-router-dom"
-export default function Aside(){
-    return(
-        <aside className="sidebar text-white p-3 position-fixed pt-5" style={{
-                    top: "100px",
-                    left: "0",
-                    height: "100vh"
-                }}>
-                <ul className="nav flex-column mt-4">
-                    <li className="nav-item">
-                        {/* <a className="nav-link text-white" href="#">Dashboard</a> */}
-                        <Link className="text-light" to='/'>Dashboard</Link>
-                    </li>
+export default function Aside() {
+    return (
+        <aside className="aside">
 
-                    <li className="nav-item">
-                        {/* <a className="nav-link text-white" href="#">Formations</a> */}
-                        <Link className="text-light" to='/formation'>Formation</Link>
-                    </li>
+            <h2 className="logo">Admin</h2>
 
-                    <li className="nav-item">
-                        {/* <a className="nav-link text-white" href="#">Formateurs</a> */}
-                        <Link className="text-light" to='/formateur'>Formateur</Link>
-                    </li>
+            <nav className="menu">
 
-                    <li className="nav-item">
-                        <a className="nav-link text-white" href="#">Settings</a>
-                    </li>
-                </ul>
+                <NavLink 
+                    to="/dashboard"
+                    className={({isActive}) => isActive ? "active" : ""}
+                >
+                    Dashboard
+                </NavLink>
+
+                <NavLink 
+                    to="/formation"
+                    className={({isActive}) => isActive ? "active" : ""}
+                >
+                    Formations
+                </NavLink>
+
+            </nav>
+
         </aside>
-    )
+    );
 }
