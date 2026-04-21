@@ -22,6 +22,13 @@ export default function Aside() {
                     Formations
                 </NavLink>
 
+                <NavLink 
+                    to="/add"
+                    className={({isActive}) => isActive ? "active" : ""}
+                >
+                    Affecter Formations
+                </NavLink>
+
             </nav>
 
         </aside>

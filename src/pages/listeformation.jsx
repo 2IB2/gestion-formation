@@ -1,35 +1,32 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import Formations from "./formations";
 import Aside from "../components/aside";
 import Header from "../components/header";
-import '../styles/dashboard.css'
+import '../styles/dashboard.css';
+import { Get, Post, Put, Delete } from "../api/api";
 export default function ListeFormation({ username, onLogout }) {
     const [showForm, setShowForm] = useState(false);
     const [editingIndex, setEditingIndex] = useState(null);
     const [newFormation, setNewFormation] = useState({
-        nom: "",
+        title: "",
         description: "",
         duree: "",
         date_debut: "",
         date_fin: ""
     });
 
-    const [data, setData] = useState([
-        {
-            nom: "back end",
-            description: "loremzeedez",
-            duree: 20,
-            date_debut: "20/01/2020",
-            date_fin: "20/04/2021",
-        },
-        {
-            nom: "front end",
-            description: "loremzeedez",
-            duree: 18,
-            date_debut: "20/05/2023",
-            date_fin: "19/04/2025",
-        }
-    ]);
+    const [data, setData] = useState([]);
+    useEffect(() => {
+        const fetchFormations = async () => {
+            try {
+                const res = await Get('formations');
+                setData(res.data.formations || res.data.data || res.data);
+            } catch (err) {
+                console.error("Error fetching formations:", err);
+            }
+        };
+        fetchFormations();
+    }, []);
 
     const handleChange = (e) => {
         setNewFormation({
@@ -40,43 +37,58 @@ export default function ListeFormation({ username, onLogout }) {
 
     const handleEdit = (index) => {
         setEditingIndex(index);
-        setNewFormation(data[index]);
+        setNewFormation({ ...data[index] });
         setShowForm(true);
     };
 
-    const handleAdd = () => {
-
-        if (editingIndex !== null) {
-
-            const updated = [...data];
-            updated[editingIndex] = newFormation;
-
-            setData(updated);
-            setEditingIndex(null);
-
-        } else {
-            if (!newFormation.nom || !newFormation.duree) {
-                alert("Nom and durée are required")
-                return
-            }
-
-            setData([...data, newFormation]);
-
+    const handleAdd = async () => {
+        if (!newFormation.title.trim() || !newFormation.duree) {
+            alert("Titre and durée are required");
+            return;
         }
 
+        try {
+            if (editingIndex !== null) {
+                const formationId = data[editingIndex].id;
+                const res = await Put(`formations/${formationId}`, newFormation);
+                const updatedData = [...data];
+                updatedData[editingIndex] = res.data.data || res.data || newFormation;
+                setData(updatedData);
+                setEditingIndex(null);
+            } else {
+                const res = await Post('formations', newFormation);
+                setData([...data, res.data.data || res.data || newFormation]);
+            }
+            resetForm();
+        } catch (err) {
+            console.error("Error saving formation:", err);
+        }
+    };
+
+    const resetForm = () => {
         setNewFormation({
-            nom: "",
+            title: "",
             description: "",
             duree: "",
             date_debut: "",
             date_fin: ""
         });
-
         setShowForm(false);
     };
 
-    const handleDelete = (index) => {
-        setData((prev) => prev.filter((_, i) => i !== index));
+    const handleDelete = async (index) => {
+        const formationId = data[index].id;
+        if (!formationId) {
+            setData((prev) => prev.filter((_, i) => i !== index));
+            return;
+        }
+
+        try {
+            await Delete(`formations/${formationId}`);
+            setData((prev) => prev.filter((_, i) => i !== index));
+        } catch (err) {
+            console.error("Error deleting formation:", err);
+        }
     };
 
     return (
@@ -93,6 +105,14 @@ export default function ListeFormation({ username, onLogout }) {
                 }}
             >
                 <div className="container">
+                    <button
+                        className="btn btn-success mb-3"
+                        onClick={() => {setShowForm(true)
+                            setEditingIndex(null)}
+                        }
+                    >
+                        Ajouter Formation
+                    </button>
                     <div className="row ">
                         {data.map((formation, index) => (
                             <Formations
@@ -103,23 +123,18 @@ export default function ListeFormation({ username, onLogout }) {
                             />
                         ))}
                     </div>
-                    <button
-                        className="btn btn-success mb-3"
-                        onClick={() => setShowForm(true)}
-                    >
-                        Ajouter Formation
-                    </button>
+                    
                     {showForm && (
                         <div className="modal-overlay" onClick={() => setShowForm(false)}>
                             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
 
-                                <h4>Ajouter Formation</h4>
+                                <div className="b">{editingIndex !== null ? "Modifier Formation" : "Ajouter Formation"}</div>
 
                                 <input
                                     className="form-control mb-2"
-                                    placeholder="Nom"
-                                    name="nom"
-                                    value={newFormation.nom}
+                                    placeholder="Titre"
+                                    name="title"
+                                    value={newFormation.title}
                                     onChange={handleChange}
                                 />
 
@@ -158,7 +173,7 @@ export default function ListeFormation({ username, onLogout }) {
 
                                 <div className="d-flex gap-2 mt-3">
                                     <button className="btn btn-primary" onClick={handleAdd}>
-                                        {editingIndex !== null ? "Update Formation" : "Ajouter"}
+                                        {editingIndex !== null ? "Modifier" : "Ajouter"}
                                     </button>
 
                                     <button

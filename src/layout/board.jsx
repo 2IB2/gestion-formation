@@ -5,18 +5,22 @@ import Login from "../pages/login";
 import Dashboard from "../pages/dashboard";
 import ListeFormation from "../pages/listeformation";
 import ProtectedRoute from "./protectedroute";
+import AjouterAuFormation from "../pages/ajouterauformation";
 
 export default function Board() {
 
     const [user, setUser] = useState(null);
 
     useEffect(() => {
-        const storedUser = JSON.parse(localStorage.getItem("user"));
-        if (storedUser) setUser(storedUser);
+        try {
+            const storedUser = JSON.parse(localStorage.getItem("user"));
+            if (storedUser) setUser(storedUser);
+        } catch {
+            localStorage.removeItem("user");
+        }
     }, []);
 
     const handleLogin = (userData) => {
-        localStorage.setItem("user", JSON.stringify(userData));
         setUser(userData);
     };
 
@@ -31,14 +35,18 @@ export default function Board() {
 
                 <Route
                     path="/"
-                    element={<Login onLogin={handleLogin} />}
+                    element={
+                        user
+                            ? <Dashboard username={user?.username} onLogout={handleLogout}/>
+                            : <Login onLogin={handleLogin}/>
+                    }
                 />
 
                 <Route
                     path="/dashboard"
                     element={
                         <ProtectedRoute user={user}>
-                            <Dashboard username={user?.name} onLogout={handleLogout} />
+                            <Dashboard username={user?.username} onLogout={handleLogout}/>
                         </ProtectedRoute>
                     }
                 />
@@ -47,7 +55,16 @@ export default function Board() {
                     path="/formation"
                     element={
                         <ProtectedRoute user={user}>
-                            <ListeFormation username={user?.name} onLogout={handleLogout} />
+                            <ListeFormation username={user?.username} onLogout={handleLogout}/>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/add"
+                    element={
+                        <ProtectedRoute user={user}>
+                            <AjouterAuFormation username={user?.username} onLogout={handleLogout}/>
                         </ProtectedRoute>
                     }
                 />

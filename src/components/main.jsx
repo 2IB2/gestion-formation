@@ -1,4 +1,67 @@
+import { useEffect, useState } from "react";
+import { Get } from "../api/api";
+
 export default function Main() {
+    const [formations, setFormations] = useState([]);
+    const [stats, setStats] = useState({
+        total: 0,
+        active: 0,
+        users: 0,
+        upcoming: 0
+    });
+
+    useEffect(() => {
+    const fetchData = async () => {
+        try {
+            const [formationsRes, participantsRes] = await Promise.allSettled([
+                Get('formations'),
+                Get('users')
+            ]);
+
+            let fetchedFormations = [];
+            let fetchedUsersCount = 0;
+
+
+            if (formationsRes.status === 'fulfilled' && formationsRes.value?.data) {
+                const rawData = formationsRes.value.data;
+                fetchedFormations = rawData.formations || rawData.data || rawData || [];
+                setFormations(Array.isArray(fetchedFormations) ? fetchedFormations : []);
+            }
+            if (participantsRes.status === 'fulfilled' && participantsRes.value?.data) {
+                const rawParticipants = participantsRes.value.data;
+                fetchedUsersCount = rawParticipants.users?.length 
+                                    || (Array.isArray(rawParticipants) ? rawParticipants.length : 0);
+            }
+
+            const today = new Date();
+            const safeFormations = Array.isArray(fetchedFormations) ? fetchedFormations : [];
+
+            const active = safeFormations.filter(f => {
+                if (!f.date_debut || !f.date_fin) return false;
+                const start = new Date(f.date_debut);
+                const end = new Date(f.date_fin);
+                return today >= start && today <= end;
+            }).length;
+
+            const upcoming = safeFormations.filter(f => {
+                if (!f.date_debut) return false;
+                return new Date(f.date_debut) > today;
+            }).length;
+
+            setStats({
+                total: safeFormations.length,
+                active,
+                users: fetchedUsersCount,
+                upcoming
+            });
+
+        } catch (err) {
+            console.error("Critical Dashboard Crash:", err);
+        }
+    };
+    fetchData();
+}, []);
+
     return (
         <main className="main">
 
@@ -8,22 +71,22 @@ export default function Main() {
 
                 <div className="card">
                     <h3>Total Formations</h3>
-                    <p>12</p>
+                    <p>{stats.total}</p>
                 </div>
 
                 <div className="card">
                     <h3>Active Formations</h3>
-                    <p>5</p>
+                    <p>{stats.active}</p>
                 </div>
 
                 <div className="card">
                     <h3>Users</h3>
-                    <p>24</p>
+                    <p>{stats.users}</p>
                 </div>
 
                 <div className="card">
                     <h3>Upcoming</h3>
-                    <p>3</p>
+                    <p>{stats.upcoming}</p>
                 </div>
 
             </div>
@@ -42,19 +105,14 @@ export default function Main() {
                     </thead>
 
                     <tbody>
-                        <tr>
-                            <td>React</td>
-                            <td>20h</td>
-                            <td>01/03/2026</td>
-                            <td>10/03/2026</td>
-                        </tr>
-
-                        <tr>
-                            <td>Laravel</td>
-                            <td>18h</td>
-                            <td>12/03/2026</td>
-                            <td>20/03/2026</td>
-                        </tr>
+                        {formations.slice(0, 5).map((f, index) => (
+                            <tr key={f.id || index}>
+                                <td>{f.title}</td>
+                                <td>{f.duree}h</td>
+                                <td>{f.date_debut}</td>
+                                <td>{f.date_fin}</td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
 
