@@ -10,7 +10,7 @@ function Dashboard({ username, onLogout }) {
 
             <div className="dashboard-body">
                 <Aside />
-                <Main />
+                <Main className="mt-5"/>
             </div>
         </div>
     )

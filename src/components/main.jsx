@@ -6,61 +6,61 @@ export default function Main() {
     const [stats, setStats] = useState({
         total: 0,
         active: 0,
-        users: 0,
+        participants: 0,
         upcoming: 0
     });
 
     useEffect(() => {
-    const fetchData = async () => {
-        try {
-            const [formationsRes, participantsRes] = await Promise.allSettled([
-                Get('formations'),
-                Get('users')
-            ]);
+        const fetchData = async () => {
+            try {
+                const [formationsRes, participantsRes] = await Promise.allSettled([
+                    Get('formations'),
+                    Get('participents')
+                ]);
 
-            let fetchedFormations = [];
-            let fetchedUsersCount = 0;
+                let fetchedFormations = [];
+                let fetchedParticipantsCount = 0;
 
+                if (formationsRes.status === 'fulfilled' && formationsRes.value?.data) {
+                    const rawData = formationsRes.value.data;
+                    fetchedFormations = rawData.formations || rawData.data || rawData || [];
+                    setFormations(Array.isArray(fetchedFormations) ? fetchedFormations : []);
+                }
 
-            if (formationsRes.status === 'fulfilled' && formationsRes.value?.data) {
-                const rawData = formationsRes.value.data;
-                fetchedFormations = rawData.formations || rawData.data || rawData || [];
-                setFormations(Array.isArray(fetchedFormations) ? fetchedFormations : []);
+                if (participantsRes.status === 'fulfilled' && participantsRes.value?.data) {
+                    const rawData = participantsRes.value.data;
+                    const participentsList = rawData.participents || rawData.data || rawData || [];
+                    fetchedParticipantsCount = Array.isArray(participentsList) ? participentsList.length : 0;
+                }
+
+                const today = new Date();
+                const safeFormations = Array.isArray(fetchedFormations) ? fetchedFormations : [];
+
+                const active = safeFormations.filter(f => {
+                    if (!f.date_debut || !f.date_fin) return false;
+                    const start = new Date(f.date_debut);
+                    const end = new Date(f.date_fin);
+                    return today >= start && today <= end;
+                }).length;
+
+                const upcoming = safeFormations.filter(f => {
+                    if (!f.date_debut) return false;
+                    return new Date(f.date_debut) > today;
+                }).length;
+
+                setStats({
+                    total: safeFormations.length,
+                    active,
+                    participants: fetchedParticipantsCount,
+                    upcoming
+                });
+
+            } catch (err) {
+                console.error("Dashboard Data Fetch Error:", err);
             }
-            if (participantsRes.status === 'fulfilled' && participantsRes.value?.data) {
-                const rawParticipants = participantsRes.value.data;
-                fetchedUsersCount = rawParticipants.users?.length 
-                                    || (Array.isArray(rawParticipants) ? rawParticipants.length : 0);
-            }
-
-            const today = new Date();
-            const safeFormations = Array.isArray(fetchedFormations) ? fetchedFormations : [];
-
-            const active = safeFormations.filter(f => {
-                if (!f.date_debut || !f.date_fin) return false;
-                const start = new Date(f.date_debut);
-                const end = new Date(f.date_fin);
-                return today >= start && today <= end;
-            }).length;
-
-            const upcoming = safeFormations.filter(f => {
-                if (!f.date_debut) return false;
-                return new Date(f.date_debut) > today;
-            }).length;
-
-            setStats({
-                total: safeFormations.length,
-                active,
-                users: fetchedUsersCount,
-                upcoming
-            });
-
-        } catch (err) {
-            console.error("Critical Dashboard Crash:", err);
-        }
-    };
-    fetchData();
-}, []);
+        };
+        fetchData();
+    }, []);
 
     return (
         <main className="main">
@@ -80,8 +80,8 @@ export default function Main() {
                 </div>
 
                 <div className="card">
-                    <h3>Users</h3>
-                    <p>{stats.users}</p>
+                    <h3>Participants</h3>
+                    <p>{stats.participants}</p>
                 </div>
 
                 <div className="card">
@@ -108,7 +108,7 @@ export default function Main() {
                         {formations.slice(0, 5).map((f, index) => (
                             <tr key={f.id || index}>
                                 <td>{f.title}</td>
-                                <td>{f.duree}h</td>
+                                <td>{f.duree}</td>
                                 <td>{f.date_debut}</td>
                                 <td>{f.date_fin}</td>
                             </tr>

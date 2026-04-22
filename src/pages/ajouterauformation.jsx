@@ -14,13 +14,7 @@ export default function AjouterAuFormation({ username, onLogout }) {
     });
 
     const [selectedIndexes, setSelectedIndexes] = useState([]);
-
-    const [formations,setFormations] = useState([]);
-    useEffect(() => {
-        Get('formations')
-            .then(res => setFormations(res.data.formations || res.data.data || res.data))
-            .catch(err => console.error("Error fetching formations:", err));
-    }, []);
+    const [selectedPivotIds, setSelectedPivotIds] = useState([]);
 
     const [data, setData] = useState([]);
     useEffect(() => {
@@ -61,6 +55,14 @@ export default function AjouterAuFormation({ username, onLogout }) {
             setSelectedIndexes(selectedIndexes.filter(i => i !== index));
         } else {
             setSelectedIndexes([...selectedIndexes, index]);
+        }
+    };
+
+    const togglePivotCheckbox = (id) => {
+        if (selectedPivotIds.includes(id)) {
+            setSelectedPivotIds(selectedPivotIds.filter(i => i !== id));
+        } else {
+            setSelectedPivotIds([...selectedPivotIds, id]);
         }
     };
 
@@ -107,6 +109,7 @@ export default function AjouterAuFormation({ username, onLogout }) {
             setData(res.data.formations || res.data.data || res.data);
             
             setSelectedIndexes([]);
+            setSelectedPivotIds([]);
 
             alert("Formations affectées avec succès !");
             navigate("/add");
@@ -117,17 +120,23 @@ export default function AjouterAuFormation({ username, onLogout }) {
     };
 
     const desaffecter = async () => {
-        if (selections.themes.length === 0 || selections.animateurs.length === 0) {
-            setError("Veuillez d'abord sélectionner le thème et l'animateur à désaffecter.");
+        if (selectedPivotIds.length === 0 && (selections.themes.length === 0 || selections.animateurs.length === 0)) {
+            setError("Veuillez sélectionner des formations à désaffecter (cocher) ou choisir un thème et un animateur dans les listes.");
             return;
         }
 
         try {
-            const rowsToDesaffecter = data.filter(row => {
-                const currentThemeId = row.themes?.[0]?.id;
-                const currentAnimaterId = row.animateurs?.[0]?.id;
-                return selections.themes.includes(String(currentThemeId)) && selections.animateurs.includes(String(currentAnimaterId));
-            });
+            let rowsToDesaffecter = [];
+            
+            if (selectedPivotIds.length > 0) {
+                rowsToDesaffecter = data.filter(row => selectedPivotIds.includes(row.id));
+            } else {
+                rowsToDesaffecter = data.filter(row => {
+                    const currentThemeId = row.themes?.[0]?.id;
+                    const currentAnimaterId = row.animateurs?.[0]?.id;
+                    return selections.themes.includes(String(currentThemeId)) && selections.animateurs.includes(String(currentAnimaterId));
+                });
+            }
 
             if (rowsToDesaffecter.length === 0) {
                 setError("Aucune formation ne correspond à cette sélection.");
@@ -136,8 +145,16 @@ export default function AjouterAuFormation({ username, onLogout }) {
 
             const promises = [];
             rowsToDesaffecter.forEach((row) => {
-                selections.themes.forEach((themeId) => {
-                    selections.animateurs.forEach((animateurId) => {
+                const themesToProcess = selections.themes.length > 0 
+                    ? selections.themes 
+                    : (row.themes?.map(t => String(t.id)) || []);
+                
+                const animateursToProcess = selections.animateurs.length > 0 
+                    ? selections.animateurs 
+                    : (row.animateurs?.map(a => String(a.id)) || []);
+
+                themesToProcess.forEach((themeId) => {
+                    animateursToProcess.forEach((animateurId) => {
                         const dataToDelete = {
                             formation_id: row.id,
                             theme_id: themeId,
@@ -150,10 +167,9 @@ export default function AjouterAuFormation({ username, onLogout }) {
 
             await Promise.all(promises);
 
-            // Fetch the updated formations from the backend
-
             const res = await Get('formations');
             setData(res.data.formations || res.data.data || res.data);
+            setSelectedPivotIds([]);
 
             alert("Désaffectation effectuée avec succès !");
         } catch (err) {
@@ -167,7 +183,7 @@ export default function AjouterAuFormation({ username, onLogout }) {
             <Header onLogout={onLogout} username={username} />
             <div className="dashboard-body">
                 <Aside />
-                <div className="main-content" style={{ marginLeft: "250px", padding: "40px", flex: 1, overflowY: "auto", height: "100vh" }}>
+                <div className="main-content mt-5" style={{ marginLeft: "250px", padding: "40px", flex: 1, overflowY: "auto", height: "100vh" }}>
                     <div className="container" style={{ maxWidth: "800px", background: "#fff", padding: "30px", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
                         <h2 className="mb-4" style={{ color: "#333", borderBottom: "2px solid #eee", paddingBottom: "10px" }}>Affecter un Thème et un Animateur</h2>
 
@@ -257,6 +273,7 @@ export default function AjouterAuFormation({ username, onLogout }) {
                                     <table className="table table-bordered table-hover">
                                         <thead className="table-light">
                                             <tr>
+                                                <th>Sélect</th>
                                                 <th>Titre Formation</th>
                                                 <th>Animateurs (actuels)</th>
                                                 <th>Thèmes (actuels)</th>
@@ -264,7 +281,15 @@ export default function AjouterAuFormation({ username, onLogout }) {
                                         </thead>
                                         <tbody>
                                             {data.filter(c => c.animateurs?.length > 0 || c.themes?.length > 0).map((c, index) => (
-                                                <tr key={`pivot-${index}`}>
+                                                <tr key={`pivot-${index}`} onClick={() => togglePivotCheckbox(c.id)} style={{ cursor: "pointer" }}>
+                                                    <td>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={selectedPivotIds.includes(c.id)} 
+                                                            onChange={() => togglePivotCheckbox(c.id)}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                    </td>
                                                     <td className="fw-bold">{c.title}</td>
                                                     <td>{c.animateurs?.length > 0 ? c.animateurs.map(a => a.nom).join(', ') : '-'}</td>
                                                     <td>{c.themes?.length > 0 ? c.themes.map(t => t.title).join(', ') : '-'}</td>
@@ -272,13 +297,13 @@ export default function AjouterAuFormation({ username, onLogout }) {
                                             ))}
                                         </tbody>
                                         {/* message au cas uncune affectation */}
-                                        {data.filter(c => c.animateurs?.length > 0 || c.themes?.length > 0).length === 0 && (
-                                            <tbody>
-                                                <tr>
-                                                    <td colSpan="3" className="text-center text-muted py-3">Aucune affectation active.</td>
-                                                </tr>
-                                            </tbody>
-                                        )}
+                                            {data.filter(c => c.animateurs?.length > 0 || c.themes?.length > 0).length === 0 && (
+                                                <tbody>
+                                                    <tr>
+                                                        <td colSpan="4" className="text-center text-muted py-3">Aucune affectation active.</td>
+                                                    </tr>
+                                                </tbody>
+                                            )}
                                     </table>
                                 </div>
 
@@ -288,7 +313,7 @@ export default function AjouterAuFormation({ username, onLogout }) {
 
                             <div className="d-flex justify-content-end gap-3 mt-4">
                                 <button type="button" className="btn btn-secondary px-4" onClick={()=>desaffecter()}>
-                                    Désaffecter (selon sélections ci-dessus)
+                                    Désaffecter (selon sélections)
                                 </button>
                                 <button type="submit" className="btn btn-primary px-4" style={{ backgroundColor: "#007bff" }}>
                                     Affecter (aux formations cochées)

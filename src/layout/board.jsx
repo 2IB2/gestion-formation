@@ -6,6 +6,9 @@ import Dashboard from "../pages/dashboard";
 import ListeFormation from "../pages/listeformation";
 import ProtectedRoute from "./protectedroute";
 import AjouterAuFormation from "../pages/ajouterauformation";
+import AjouterParticipant from "../pages/AjouterParticipant";
+import AffecterParticipant from "../pages/AffecterParticipant";
+import Hebergement from "../pages/Hebergement";
 
 export default function Board() {
 
@@ -69,6 +72,32 @@ export default function Board() {
                     }
                 />
 
+                <Route
+                    path="/add-participant"
+                    element={
+                        <ProtectedRoute user={user}>
+                            <AjouterParticipant username={user?.username} onLogout={handleLogout}/>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/affecter-participant"
+                    element={
+                        <ProtectedRoute user={user}>
+                            <AffecterParticipant username={user?.username} onLogout={handleLogout}/>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/hebergement"
+                    element={
+                        <ProtectedRoute user={user}>
+                            <Hebergement username={user?.username} onLogout={handleLogout}/>
+                        </ProtectedRoute>
+                    }
+                />
             </Routes>
         </BrowserRouter>
     );

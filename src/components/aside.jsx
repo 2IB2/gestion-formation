@@ -29,6 +29,27 @@ export default function Aside() {
                     Affecter Formations
                 </NavLink>
 
+                <NavLink 
+                    to="/add-participant"
+                    className={({isActive}) => isActive ? "active" : ""}
+                >
+                    Ajouter Participant
+                </NavLink>
+
+                <NavLink 
+                    to="/affecter-participant"
+                    className={({isActive}) => isActive ? "active" : ""}
+                >
+                    Affecter Participant
+                </NavLink>
+
+                <NavLink 
+                    to="/hebergement"
+                    className={({isActive}) => isActive ? "active" : ""}
+                >
+                    Hébergement
+                </NavLink>
+
             </nav>
 
         </aside>
