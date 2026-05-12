@@ -3,11 +3,12 @@ import Header from "../components/header"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Get, Put, Post, Delete } from "../api/api"
-export default function AjouterAuFormation({ username, onLogout }) {
+import { Users, Layers, BookOpen, Trash2, CheckCircle, Info } from "lucide-react";
+
+export default function AjouterAuFormation({ user, onLogout }) {
     const navigate = useNavigate();
-
     const [error, setError] = useState("");
-
+    const [loading, setLoading] = useState(true);
     const [selections, setSelections] = useState({
         animateurs: [],
         themes: []
@@ -15,29 +16,41 @@ export default function AjouterAuFormation({ username, onLogout }) {
 
     const [selectedIndexes, setSelectedIndexes] = useState([]);
     const [selectedPivotIds, setSelectedPivotIds] = useState([]);
-
     const [data, setData] = useState([]);
-    useEffect(() => {
-        Get('formations')
-            .then(res => setData(res.data.formations || res.data.data || res.data))
-            .catch(err => console.error("Error fetching formations:", err));
-    }, []);
-    
     const [themes, setThemes] = useState([]);
-    useEffect(() => {
-        Get('themes')
-            .then(res => setThemes(res.data.themes || res.data.data || (Array.isArray(res.data) ? res.data : [])))
-            .catch(err => console.error("Error fetching themes:", err));
-    }, []);
-
-
     const [animateurs, setAnimateurs] = useState([]);
+
     useEffect(() => {
-        Get('animateurs')
-            .then(res => setAnimateurs(res.data.animators || res.data.animateurs || res.data.data || (Array.isArray(res.data) ? res.data : [])))
-            .catch(err => console.error("Error fetching animateurs:", err));
+        const loadAll = async () => {
+            setLoading(true);
+            try {
+                const [formRes, themeRes, animRes] = await Promise.all([
+                    Get('formations'),
+                    Get('themes'),
+                    Get('animateurs')
+                ]);
+                
+                setData(formRes.data.formations || formRes.data.data || formRes.data || []);
+                setThemes(themeRes.data.themes || themeRes.data.data || (Array.isArray(themeRes.data) ? themeRes.data : []));
+                setAnimateurs(animRes.data.animators || animRes.data.animateurs || animRes.data.data || (Array.isArray(animRes.data) ? animRes.data : []));
+            } catch (err) {
+                console.error("Error loading initial data:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadAll();
     }, []);
-    
+
+    const fetchFormations = async () => {
+        try {
+            const res = await Get('formations');
+            setData(res.data.formations || res.data.data || res.data || []);
+        } catch (err) {
+            console.error("Error refreshing formations:", err);
+        }
+    };
+
     const handleSelectChange = (e) => {
         const { name, options } = e.target;
         const selectedValues = Array.from(options)
@@ -70,9 +83,8 @@ export default function AjouterAuFormation({ username, onLogout }) {
         e.preventDefault();
         setError(""); 
 
-      
         if (selectedIndexes.length === 0) {
-            setError("Veuillez sélectionner au moins une formation dans le tableau.");
+            setError("Veuillez sélectionner au moins une formation.");
             return;
         }
         
@@ -82,12 +94,9 @@ export default function AjouterAuFormation({ username, onLogout }) {
         }
 
         try {
-            
             const promises = [];
-            
             selectedIndexes.forEach((index) => {
                 const originalRow = data[index];
-                
                 selections.themes.forEach((themeId) => {
                     selections.animateurs.forEach((animateurId) => {
                         const updatedRow = {
@@ -95,39 +104,30 @@ export default function AjouterAuFormation({ username, onLogout }) {
                             theme_id: themeId,
                             animater_id: animateurId
                         };
-                        promises.push(
-                            Post(`pivot`, updatedRow).then(() => ({ index, updatedRow }))
-                        );
+                        promises.push(Post(`pivot`, updatedRow));
                     });
                 });
             });
 
             await Promise.all(promises);
-
-            // Fetch the updated formations from the backend to get the latest pivoting
-            const res = await Get('formations');
-            setData(res.data.formations || res.data.data || res.data);
-            
+            await fetchFormations();
             setSelectedIndexes([]);
             setSelectedPivotIds([]);
-
-            alert("Formations affectées avec succès !");
-            navigate("/add");
+            alert("Affecté avec succès !");
         } catch (err) {
             console.error("Error updating formations:", err);
-            setError("Une erreur est survenue lors de l'affectation des formations.");
+            setError("Une erreur est survenue lors de l'affectation.");
         }
     };
 
     const desaffecter = async () => {
         if (selectedPivotIds.length === 0 && (selections.themes.length === 0 || selections.animateurs.length === 0)) {
-            setError("Veuillez sélectionner des formations à désaffecter (cocher) ou choisir un thème et un animateur dans les listes.");
+            setError("Veuillez sélectionner les formations à désaffecter ou choisir un thème et un animateur.");
             return;
         }
 
         try {
             let rowsToDesaffecter = [];
-            
             if (selectedPivotIds.length > 0) {
                 rowsToDesaffecter = data.filter(row => selectedPivotIds.includes(row.id));
             } else {
@@ -145,33 +145,19 @@ export default function AjouterAuFormation({ username, onLogout }) {
 
             const promises = [];
             rowsToDesaffecter.forEach((row) => {
-                const themesToProcess = selections.themes.length > 0 
-                    ? selections.themes 
-                    : (row.themes?.map(t => String(t.id)) || []);
-                
-                const animateursToProcess = selections.animateurs.length > 0 
-                    ? selections.animateurs 
-                    : (row.animateurs?.map(a => String(a.id)) || []);
-
+                const themesToProcess = selections.themes.length > 0 ? selections.themes : (row.themes?.map(t => String(t.id)) || []);
+                const animateursToProcess = selections.animateurs.length > 0 ? selections.animateurs : (row.animateurs?.map(a => String(a.id)) || []);
                 themesToProcess.forEach((themeId) => {
                     animateursToProcess.forEach((animateurId) => {
-                        const dataToDelete = {
-                            formation_id: row.id,
-                            theme_id: themeId,
-                            animater_id: animateurId
-                        };
-                        promises.push(Delete(`pivot`, dataToDelete));
+                        promises.push(Delete(`pivot`, { formation_id: row.id, theme_id: themeId, animater_id: animateurId }));
                     });
                 });
             });
 
             await Promise.all(promises);
-
-            const res = await Get('formations');
-            setData(res.data.formations || res.data.data || res.data);
+            await fetchFormations();
             setSelectedPivotIds([]);
-
-            alert("Désaffectation effectuée avec succès !");
+            alert("Désaffecté avec succès !");
         } catch (err) {
             console.error("Error desaffecting formations:", err);
             setError("Une erreur est survenue lors de la désaffectation.");
@@ -179,150 +165,315 @@ export default function AjouterAuFormation({ username, onLogout }) {
     };
 
     return (
-        <div className="dashboard">
-            <Header onLogout={onLogout} username={username} />
-            <div className="dashboard-body">
-                <Aside />
-                <div className="main-content mt-5" style={{ marginLeft: "250px", padding: "40px", flex: 1, overflowY: "auto", height: "100vh" }}>
-                    <div className="container" style={{ maxWidth: "800px", background: "#fff", padding: "30px", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
-                        <h2 className="mb-4" style={{ color: "#333", borderBottom: "2px solid #eee", paddingBottom: "10px" }}>Affecter un Thème et un Animateur</h2>
+        <div className="dashboard-layout">
+            <Header onLogout={onLogout} username={user?.username} />
+            <Aside user={user} />
 
-                        <form onSubmit={handleSubmit}>
-                            <div className="d-flex justify-content-around">
-                                <div className="mb-3">
-                                    <label className="form-label" style={{ fontWeight: "bold" }}>Thème principal</label>
-                                    <select
-                                        multiple
-                                        className="form-control"
-                                        name="themes"
-                                        value={selections.themes}
-                                        onChange={handleSelectChange}
-                                        style={{ height: '150px' }}
-                                    >
-                                        {/* <option value="" disabled>Sélectionnez un ou plusieurs thèmes</option> */}
-
-                                        {themes.map((c, index) => (
-                                            <option key={index} value={c?.id}>
-                                                {c?.title ? c.title.charAt(0).toUpperCase() + c.title.slice(1) : "Sans Nom"}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="mb-3">
-                                    <label className="form-label" style={{ fontWeight: "bold" }}>Animateurs</label>
-                                    <select
-                                        multiple
-                                        className="form-control"
-                                        name="animateurs"
-                                        value={selections.animateurs}
-                                        onChange={handleSelectChange}
-                                        style={{ height: '150px' }}
-                                    >
-                                        {/* <option value="" disabled>Sélectionnez un ou plusieurs animateurs</option> */}
-                                        
-                                        {animateurs.map((c, index) => (
-                                            <option key={index} value={c?.id}>
-                                                {c?.nom ? c.nom.charAt(0).toUpperCase() + c.nom.slice(1) : "Sans Nom"}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                                <div className="mt-4 w-100">
-                                    <h4 className="mb-3" style={{ color: "#333", borderBottom: "2px solid #eee", paddingBottom: "10px" }}>
-                                        1. Formations (Sélectionnez pour Affecter)
-                                    </h4>
-                                    <table className="table table-bordered table-hover mb-5">
-                                        <thead className="table-light">
-                                            <tr>
-                                                <th>Sélect</th>
-                                                <th>Titre</th>
-                                                <th>Description</th>
-                                                <th>Durée</th>
-                                                <th>Date début</th>
-                                                <th>Date fin</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {data.map((c, index) => (
-                                                <tr key={`base-${index}`} onClick={() => toggleCheckbox(index)} style={{ cursor: "pointer" }}>
-                                                    <td>
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={selectedIndexes.includes(index)} 
-                                                            onChange={() => toggleCheckbox(index)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                    </td>
-                                                    <td>{c.title}</td>
-                                                    <td>{c.description}</td>
-                                                    <td>{c.duree}</td>
-                                                    <td>{c.date_debut}</td>
-                                                    <td>{c.date_fin}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        {data.length === 0 && <tbody><tr><td colSpan="6" className="text-center text-muted py-3">Aucune formation trouvée.</td></tr></tbody>}
-                                    </table>
-
-                                    <h4 className="mb-3" style={{ color: "#333", borderBottom: "2px solid #eee", paddingBottom: "10px" }}>
-                                        2. Affectations Actuelles (Pivot)
-                                    </h4>
-                                    <table className="table table-bordered table-hover">
-                                        <thead className="table-light">
-                                            <tr>
-                                                <th>Sélect</th>
-                                                <th>Titre Formation</th>
-                                                <th>Animateurs (actuels)</th>
-                                                <th>Thèmes (actuels)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {data.filter(c => c.animateurs?.length > 0 || c.themes?.length > 0).map((c, index) => (
-                                                <tr key={`pivot-${index}`} onClick={() => togglePivotCheckbox(c.id)} style={{ cursor: "pointer" }}>
-                                                    <td>
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={selectedPivotIds.includes(c.id)} 
-                                                            onChange={() => togglePivotCheckbox(c.id)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                    </td>
-                                                    <td className="fw-bold">{c.title}</td>
-                                                    <td>{c.animateurs?.length > 0 ? c.animateurs.map(a => a.nom).join(', ') : '-'}</td>
-                                                    <td>{c.themes?.length > 0 ? c.themes.map(t => t.title).join(', ') : '-'}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        {/* message au cas uncune affectation */}
-                                            {data.filter(c => c.animateurs?.length > 0 || c.themes?.length > 0).length === 0 && (
-                                                <tbody>
-                                                    <tr>
-                                                        <td colSpan="4" className="text-center text-muted py-3">Aucune affectation active.</td>
-                                                    </tr>
-                                                </tbody>
-                                            )}
-                                    </table>
-                                </div>
-
-                                <div className="w-100">
-                                    {error && <div className="alert alert-danger mt-3">{error}</div>}
-                                </div>
-
-                            <div className="d-flex justify-content-end gap-3 mt-4">
-                                <button type="button" className="btn btn-secondary px-4" onClick={()=>desaffecter()}>
-                                    Désaffecter (selon sélections)
-                                </button>
-                                <button type="submit" className="btn btn-primary px-4" style={{ backgroundColor: "#007bff" }}>
-                                    Affecter (aux formations cochées)
-                                </button>
-                            </div>
-                        </form>
+            <main className="main">
+                {loading ? (
+                    <div className="loading-state">
+                        <div className="spinner"></div>
+                        <p>Préparation de l'espace d'affectation...</p>
                     </div>
-                </div>
-            </div>
+                ) : (
+                    <>
+                        <header className="page-header">
+                            <div>
+                                <h1 className="page-title">Affecter les Détails de Formation</h1>
+                                <p className="page-subtitle">Associez les thèmes et les animateurs aux programmes spécifiques.</p>
+                            </div>
+                        </header>
+
+                        <div className="assignment-container modest-card">
+                            <form onSubmit={handleSubmit} className="assignment-form">
+                                <div className="selection-grid">
+                                    <div className="form-group">
+                                        <label><Layers size={14} style={{ marginRight: '6px' }} /> Thèmes</label>
+                                        <select
+                                            multiple
+                                            name="themes"
+                                            value={selections.themes}
+                                            onChange={handleSelectChange}
+                                            className="modest-select"
+                                        >
+                                            {themes.map((c, index) => (
+                                                <option key={index} value={c?.id}>
+                                                    {c?.title ? c.title.charAt(0).toUpperCase() + c.title.slice(1) : "Thème Sans Nom"}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="help-text"><Info size={12} style={{marginRight: '4px'}} /> Maintenez Ctrl/Cmd pour une sélection multiple</p>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label><Users size={14} style={{ marginRight: '6px' }} /> Animateurs</label>
+                                        <select
+                                            multiple
+                                            name="animateurs"
+                                            value={selections.animateurs}
+                                            onChange={handleSelectChange}
+                                            className="modest-select"
+                                        >
+                                            {animateurs.map((c, index) => (
+                                                <option key={index} value={c?.id}>
+                                                    {c?.nom ? c.nom.charAt(0).toUpperCase() + c.nom.slice(1) : "Animateur Sans Nom"}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="help-text"><Info size={12} style={{marginRight: '4px'}} /> Maintenez Ctrl/Cmd pour une sélection multiple</p>
+                                    </div>
+                                </div>
+
+                                <section className="table-section">
+                                    <h3 className="section-title">
+                                        <BookOpen size={16} style={{marginRight: '8px'}} /> 1. Sélectionner les Formations
+                                    </h3>
+                                    <div className="table-wrapper">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th style={{width: '50px'}}>Sélectionner</th>
+                                                    <th>Titre du Programme</th>
+                                                    <th>Durée</th>
+                                                    <th>Dates</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {data.map((c, index) => (
+                                                    <tr key={`base-${index}`} onClick={() => toggleCheckbox(index)} className={selectedIndexes.includes(index) ? "selected" : ""}>
+                                                        <td>
+                                                            <div className="custom-checkbox">
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={selectedIndexes.includes(index)} 
+                                                                    readOnly
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="fw-semibold">{c.title}</td>
+                                                        <td className="text-muted">{c.duree} Mois</td>
+                                                        <td className="text-muted">{c.date_debut} - {c.date_fin}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+
+                                <section className="table-section">
+                                    <h3 className="section-title">
+                                        <CheckCircle size={16} style={{marginRight: '8px'}} /> 2. Affectations Actives
+                                    </h3>
+                                    <div className="table-wrapper">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th style={{width: '50px'}}>Sélectionner</th>
+                                                    <th>Programme</th>
+                                                    <th>Animateurs Associés</th>
+                                                    <th>Thèmes Associés</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {data.filter(c => c.animateurs?.length > 0 || c.themes?.length > 0).map((c, index) => (
+                                                    <tr key={`pivot-${index}`} onClick={() => togglePivotCheckbox(c.id)} className={selectedPivotIds.includes(c.id) ? "selected" : ""}>
+                                                        <td>
+                                                            <div className="custom-checkbox">
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={selectedPivotIds.includes(c.id)} 
+                                                                    readOnly
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td className="fw-semibold">{c.title}</td>
+                                                        <td>{c.animateurs?.map(a => a.nom).join(', ') || '-'}</td>
+                                                        <td>{c.themes?.map(t => t.title).join(', ') || '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+
+                                {error && <div className="error-box">{error}</div>}
+
+                                <div className="form-actions">
+                                    <button type="button" className="secondary-btn" onClick={desaffecter}>
+                                        <Trash2 size={16} style={{marginRight: '8px'}} /> Désaffecter
+                                    </button>
+                                    <button type="submit" className="primary-btn">
+                                        <CheckCircle size={16} style={{marginRight: '8px'}} /> Confirmer l'Affectation
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </>
+                )}
+            </main>
+
+            <style jsx="true">{`
+                .loading-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 400px;
+                    color: var(--text-muted);
+                }
+                .spinner {
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid #f1f5f9;
+                    border-top-color: var(--primary);
+                    border-radius: 50%;
+                    animation: spin 0.8s linear infinite;
+                    margin-bottom: 16px;
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                .assignment-container {
+                    background: var(--bg-card);
+                    border: 1px solid var(--border-color);
+                    border-radius: var(--radius-md);
+                    padding: 32px;
+                    box-shadow: var(--shadow-sm);
+                }
+                .selection-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 32px;
+                    margin-bottom: 40px;
+                }
+                .modest-select {
+                    width: 100%;
+                    height: 180px;
+                    padding: 12px;
+                    border: 1px solid var(--border-color);
+                    border-radius: var(--radius-sm);
+                    font-size: 0.9375rem;
+                    background: #fdfdfd;
+                    transition: border-color 0.2s;
+                }
+                .modest-select:focus {
+                    outline: none;
+                    border-color: var(--primary);
+                }
+                .help-text {
+                    display: flex;
+                    align-items: center;
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    margin-top: 8px;
+                }
+                .table-section {
+                    margin-bottom: 48px;
+                }
+                .section-title {
+                    display: flex;
+                    align-items: center;
+                    font-size: 1.125rem;
+                    margin-bottom: 20px;
+                    padding-bottom: 12px;
+                    border-bottom: 1px solid var(--border-color);
+                }
+                .table-wrapper {
+                    max-height: 350px;
+                    overflow-y: auto;
+                    border: 1px solid var(--border-color);
+                    border-radius: var(--radius-md);
+                    background: white;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                th {
+                    background: #f8fafc;
+                    padding: 12px 16px;
+                    font-size: 0.8125rem;
+                    font-weight: 600;
+                    color: var(--text-muted);
+                    text-align: left;
+                    position: sticky;
+                    top: 0;
+                    border-bottom: 1px solid var(--border-color);
+                    z-index: 10;
+                }
+                td {
+                    padding: 14px 16px;
+                    font-size: 0.875rem;
+                    border-bottom: 1px solid var(--border-color);
+                }
+                tr:last-child td { border-bottom: none; }
+                tr:hover { background: #f8fafc; cursor: pointer; }
+                tr.selected { background: #eff6ff; }
+                .fw-semibold { font-weight: 600; }
+                .text-muted { color: var(--text-muted); }
+                
+                .custom-checkbox {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .error-box {
+                    background: #fef2f2;
+                    color: #ef4444;
+                    padding: 16px;
+                    border-radius: var(--radius-sm);
+                    margin-bottom: 24px;
+                    font-size: 0.875rem;
+                    border: 1px solid #fee2e2;
+                }
+                .form-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 16px;
+                    padding-top: 24px;
+                    border-top: 1px solid var(--border-color);
+                }
+                .primary-btn {
+                    background: var(--primary);
+                    color: white;
+                    border: none;
+                    padding: 12px 28px;
+                    border-radius: var(--radius-sm);
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .primary-btn:hover {
+                    background: var(--primary-hover);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+                }
+                .secondary-btn {
+                    background: transparent;
+                    border: 1px solid var(--border-color);
+                    color: var(--text-main);
+                    padding: 12px 28px;
+                    border-radius: var(--radius-sm);
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                .secondary-btn:hover {
+                    background: #f1f5f9;
+                }
+                
+                svg { 
+                    display: inline-block;
+                    vertical-align: middle;
+                    stroke: currentColor;
+                    stroke-width: 2px;
+                }
+            `}</style>
         </div>
     )
-}
+}

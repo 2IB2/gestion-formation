@@ -9,6 +9,8 @@ import AjouterAuFormation from "../pages/ajouterauformation";
 import AjouterParticipant from "../pages/AjouterParticipant";
 import AffecterParticipant from "../pages/AffecterParticipant";
 import Hebergement from "../pages/Hebergement";
+import ClientSchedule from "../pages/ClientSchedule";
+import TrainerAbsences from "../pages/TrainerAbsences";
 
 export default function Board() {
 
@@ -40,7 +42,16 @@ export default function Board() {
                     path="/"
                     element={
                         user
-                            ? <Dashboard username={user?.username} onLogout={handleLogout}/>
+                            ? <Dashboard user={user} onLogout={handleLogout}/>
+                            : <Login onLogin={handleLogin}/>
+                    }
+                />
+
+                <Route
+                    path="/login"
+                    element={
+                        user
+                            ? <Dashboard user={user} onLogout={handleLogout}/>
                             : <Login onLogin={handleLogin}/>
                     }
                 />
@@ -49,7 +60,7 @@ export default function Board() {
                     path="/dashboard"
                     element={
                         <ProtectedRoute user={user}>
-                            <Dashboard username={user?.username} onLogout={handleLogout}/>
+                            <Dashboard user={user} onLogout={handleLogout}/>
                         </ProtectedRoute>
                     }
                 />
@@ -58,7 +69,7 @@ export default function Board() {
                     path="/formation"
                     element={
                         <ProtectedRoute user={user}>
-                            <ListeFormation username={user?.username} onLogout={handleLogout}/>
+                            <ListeFormation user={user} onLogout={handleLogout}/>
                         </ProtectedRoute>
                     }
                 />
@@ -67,7 +78,7 @@ export default function Board() {
                     path="/add"
                     element={
                         <ProtectedRoute user={user}>
-                            <AjouterAuFormation username={user?.username} onLogout={handleLogout}/>
+                            <AjouterAuFormation user={user} onLogout={handleLogout}/>
                         </ProtectedRoute>
                     }
                 />
@@ -76,7 +87,7 @@ export default function Board() {
                     path="/add-participant"
                     element={
                         <ProtectedRoute user={user}>
-                            <AjouterParticipant username={user?.username} onLogout={handleLogout}/>
+                            <AjouterParticipant user={user} onLogout={handleLogout}/>
                         </ProtectedRoute>
                     }
                 />
@@ -85,7 +96,7 @@ export default function Board() {
                     path="/affecter-participant"
                     element={
                         <ProtectedRoute user={user}>
-                            <AffecterParticipant username={user?.username} onLogout={handleLogout}/>
+                            <AffecterParticipant user={user} onLogout={handleLogout}/>
                         </ProtectedRoute>
                     }
                 />
@@ -94,11 +105,29 @@ export default function Board() {
                     path="/hebergement"
                     element={
                         <ProtectedRoute user={user}>
-                            <Hebergement username={user?.username} onLogout={handleLogout}/>
+                            <Hebergement user={user} onLogout={handleLogout}/>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/schedule"
+                    element={
+                        <ProtectedRoute user={user}>
+                            <ClientSchedule user={user} onLogout={handleLogout}/>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/absences"
+                    element={
+                        <ProtectedRoute user={user}>
+                            <TrainerAbsences user={user} onLogout={handleLogout}/>
                         </ProtectedRoute>
                     }
                 />
             </Routes>
         </BrowserRouter>
     );
-}
+}
