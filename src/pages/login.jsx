@@ -92,7 +92,7 @@ export default function Login({ onLogin }) {
                         className={`tab-btn ${loginType === 'client' ? 'active' : ''}`}
                         onClick={() => { setLoginType('client'); setError(""); }}
                     >
-                        Espace Client
+                        Espace Formateur
                     </button>
                 </div>
 
