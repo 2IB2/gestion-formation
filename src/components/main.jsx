@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Get } from "../api/api";
 import { 
     Users, 
@@ -18,6 +18,7 @@ export default function Main({ user, className }) {
     const [formations, setFormations] = useState([]);
     const [assignments, setAssignments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [expandedFormationId, setExpandedFormationId] = useState(null);
     const [stats, setStats] = useState({
         total: 0,
         active: 0,
@@ -27,7 +28,7 @@ export default function Main({ user, className }) {
 
     const role = user?.role?.toLowerCase() || 'admin';
     const isAdmin = role === 'admin';
-    const isTrainer = role === 'formateur' || role === 'trainer';
+    const isTrainer = role === 'formateur' || role === 'trainer' || role === 'animateur';
     const isClient = role === 'client' || role === 'participant';
 
     useEffect(() => {
@@ -66,7 +67,7 @@ export default function Main({ user, className }) {
 
                 if (isClient) {
                     const myAssignments = fetchedAssignments.filter(a => 
-                        a.participent_id === user?.id || 
+                        a.participent_id === user?.participent?.id || 
                         a.username === user?.username ||
                         (user?.nom && a.nom === user.nom)
                     );
@@ -75,7 +76,7 @@ export default function Main({ user, className }) {
                     setFormations(myFormations);
                 } else if (isTrainer) {
                     const myFormations = safeFormations.filter(f => 
-                        f.animateur_id === user?.id || 
+                        f.animateur_id === user?.animater?.id || 
                         f.animateur === user?.username ||
                         (user?.nom && f.animateur?.includes(user.nom))
                     );
@@ -180,14 +181,16 @@ export default function Main({ user, className }) {
                                     <h3 className="section-title"><Clock size={20} /> Prochaine Session</h3>
                                     <NavLink to="/absences" className="action-link">Gérer les Absences <ArrowRight size={16} /></NavLink>
                                 </div>
-                                <div className="session-info-box mt-4">
+                                 <div className="session-info-box mt-4">
                                     <div className="session-details">
-                                        <h4>{formations[0]?.title || "Conception de Systèmes Avancés"}</h4>
+                                        <h4>{formations[0]?.title || "Aucune Session Active"}</h4>
                                         <p><Calendar size={14} /> Demain à 09:00</p>
-                                        <p><Users size={14} /> 24 Étudiants Inscrits</p>
+                                        <p><Users size={14} /> {formations[0] ? assignments.filter(a => a.formation_id === formations[0].id).length : 0} Étudiants Inscrits</p>
                                     </div>
                                     <div className="session-action">
-                                        <button className="primary-btn-sm">Démarrer la Session</button>
+                                        <button className="primary-btn-sm" onClick={() => setExpandedFormationId(formations[0]?.id)}>
+                                            Voir la liste
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -249,25 +252,83 @@ export default function Main({ user, className }) {
                                         <th>Nom de la Formation</th>
                                         <th>Durée</th>
                                         <th>Période</th>
-                                        <th>Formateur</th>
+                                        <th>Animateur</th>
                                         <th>Statut</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(formations.length > 0 ? formations.slice(0, 5) : []).map((f, index) => {
                                         const isUpcoming = new Date(f.date_debut) > new Date();
+                                        const participantsInFormation = assignments.filter(a => a.formation_id === f.id);
                                         return (
-                                            <tr key={f.id || index}>
-                                                <td className="font-semibold">{f.title}</td>
-                                                <td>{f.duree}</td>
-                                                <td>{f.date_debut} - {f.date_fin}</td>
-                                                <td>{f.animateur || 'Formateur Assigné'}</td>
-                                                <td>
-                                                    <span className={`status-pill ${isUpcoming ? 'upcoming' : 'active'}`}>
-                                                        {isUpcoming ? 'À Venir' : 'En Cours'}
-                                                    </span>
-                                                </td>
-                                            </tr>
+                                            <React.Fragment key={f.id || index}>
+                                                <tr 
+                                                    style={{ cursor: isTrainer ? 'pointer' : 'default' }}
+                                                    onClick={() => {
+                                                        if (isTrainer) {
+                                                            setExpandedFormationId(expandedFormationId === f.id ? null : f.id);
+                                                        }
+                                                    }}
+                                                >
+                                                    <td className="font-semibold">{f.title}</td>
+                                                    <td>{f.duree}</td>
+                                                    <td>{f.date_debut} - {f.date_fin}</td>
+                                                    <td>{f.animateur || 'Animateur Assigné'}</td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                                            <span className={`status-pill ${isUpcoming ? 'upcoming' : 'active'}`}>
+                                                                {isUpcoming ? 'À Venir' : 'En Cours'}
+                                                            </span>
+                                                            {isTrainer && (
+                                                                <span className="participants-badge-trigger" style={{
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 'bold',
+                                                                    color: 'var(--primary)',
+                                                                    background: '#eef2ff',
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '99px'
+                                                                }}>
+                                                                    {participantsInFormation.length} Étudiants {expandedFormationId === f.id ? '▲' : '▼'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {isTrainer && expandedFormationId === f.id && (
+                                                    <tr>
+                                                        <td colSpan="5" style={{ padding: '0px', background: '#f8fafc' }}>
+                                                            <div style={{ padding: '20px 24px', borderLeft: '4px solid var(--primary)', background: '#f8fafc' }}>
+                                                                <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <Users size={16} color="var(--primary)" /> 
+                                                                    Participants Inscrits à cette Formation ({participantsInFormation.length})
+                                                                </h4>
+                                                                {participantsInFormation.length > 0 ? (
+                                                                    <table style={{ width: '100%', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+                                                                        <thead>
+                                                                            <tr style={{ background: '#f1f5f9' }}>
+                                                                                <th style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Nom Complet</th>
+                                                                                <th style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Email</th>
+                                                                                <th style={{ padding: '8px 12px', fontSize: '0.75rem', fontWeight: 'bold', color: '#475569' }}>Établissement / Téléphone</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {participantsInFormation.map(p => (
+                                                                                <tr key={p.id || p.participent_id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                                                    <td style={{ padding: '10px 12px', fontSize: '0.85rem', fontWeight: '600' }}>{p.prenom} {p.nom}</td>
+                                                                                    <td style={{ padding: '10px 12px', fontSize: '0.85rem' }}>{p.email}</td>
+                                                                                    <td style={{ padding: '10px 12px', fontSize: '0.85rem', color: '#64748b' }}>{p.etablissement || p.telephone || '-'}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                ) : (
+                                                                    <p style={{ margin: '0', fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' }}>Aucun participant inscrit à cette formation.</p>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })}
                                     {formations.length === 0 && (

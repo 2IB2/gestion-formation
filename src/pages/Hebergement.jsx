@@ -131,7 +131,7 @@ export default function Hebergement({ user, onLogout }) {
 
     return (
         <div className="dashboard-layout">
-            <Header onLogout={onLogout} username={user?.username} />
+            <Header onLogout={onLogout} user={user} />
             <Aside user={user} />
 
             <main className="main">

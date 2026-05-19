@@ -1,10 +1,48 @@
 import { useNavigate } from "react-router-dom"
 import logo from '../assets/image.png'
-import { LogOut, Bell, UserCircle, Search } from "lucide-react";
+import { LogOut, Bell, UserCircle, Search, Info } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
 
-export default function Header({username, onLogout}) {
+export default function Header({ user, onLogout }) {
     const navigate = useNavigate();
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const dropdownRef = useRef(null);
     
+    const role = user?.role?.toLowerCase() || 'admin';
+    const displayRole = role === 'admin' ? 'Administrateur' : (role === 'formateur' || role === 'trainer' || role === 'animateur' ? 'Animateur' : 'Participant');
+
+    useEffect(() => {
+        // Fetch notifications for the participant dynamically
+        const isClient = role === 'client' || role === 'participant';
+        if (isClient && user?.participent?.id) {
+            axios.get(`http://localhost:8000/api/assignments`)
+                .then(res => {
+                    const allAssignments = res.data.assignments || res.data || [];
+                    const myAssignments = allAssignments.filter(a => a.participent_id === user.participent.id);
+                    const notifs = myAssignments.map(a => ({
+                        id: a.id,
+                        title: "Nouvelle Affectation",
+                        message: `Vous avez été ajouté à la formation "${a.formation_title || a.title}"`,
+                        time: "Récemment"
+                    }));
+                    setNotifications(notifs);
+                })
+                .catch(err => console.error("Error fetching header assignments:", err));
+        }
+    }, [user, role]);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowNotifications(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const handleClick = () => {
         onLogout();
         navigate("/");
@@ -21,18 +59,55 @@ export default function Header({username, onLogout}) {
                 <div className="header-right">
                     <div className="header-search">
                         <Search size={16} className="search-icon" />
-                        <input type="text" placeholder="Rechercher des formations, participants..." />
+                        <input type="text" placeholder="Rechercher des formations..." />
                     </div>
                     
-                    <button className="icon-action-btn" title="Notifications">
-                        <Bell size={20} />
-                        <span className="notification-dot"></span>
-                    </button>
+                    <div className="notifications-container" ref={dropdownRef}>
+                        <button 
+                            className="icon-action-btn" 
+                            title="Notifications"
+                            onClick={() => setShowNotifications(!showNotifications)}
+                        >
+                            <Bell size={20} />
+                            {notifications.length > 0 && <span className="notification-dot"></span>}
+                        </button>
+
+                        {showNotifications && (
+                            <div className="notifications-dropdown">
+                                <div className="dropdown-header">
+                                    <h3>Notifications ({notifications.length})</h3>
+                                    {notifications.length > 0 && (
+                                        <button className="clear-btn" onClick={() => setNotifications([])}>Marquer comme lu</button>
+                                    )}
+                                </div>
+                                <div className="dropdown-body">
+                                    {notifications.length > 0 ? (
+                                        notifications.map(n => (
+                                            <div key={n.id} className="notification-item">
+                                                <div className="notification-icon">
+                                                    <Info size={16} color="#3b82f6" />
+                                                </div>
+                                                <div className="notification-info">
+                                                    <h4 className="notification-item-title">{n.title}</h4>
+                                                    <p className="notification-item-msg">{n.message}</p>
+                                                    <span className="notification-item-time">{n.time}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="no-notifications">
+                                            Aucune nouvelle notification.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="user-profile">
                         <div className="user-info">
-                            <span className="user-name">{username || 'Admin'}</span>
-                            <span className="user-role">Administrateur Système</span>
+                            <span className="user-name">{user?.username || 'Admin'}</span>
+                            <span className="user-role">{displayRole}</span>
                         </div>
                         <UserCircle size={32} className="user-avatar" />
                     </div>
@@ -119,6 +194,9 @@ export default function Header({username, onLogout}) {
                     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
                 }
 
+                .notifications-container {
+                    position: relative;
+                }
                 .icon-action-btn {
                     background: transparent;
                     border: none;
@@ -142,6 +220,97 @@ export default function Header({username, onLogout}) {
                     background: #ef4444;
                     border: 2px solid white;
                     border-radius: 50%;
+                }
+
+                .notifications-dropdown {
+                    position: absolute;
+                    top: 50px;
+                    right: 0;
+                    width: 320px;
+                    background: white;
+                    border: 1px solid var(--border-color);
+                    border-radius: 12px;
+                    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+                    z-index: 1002;
+                    overflow: hidden;
+                    animation: slideDown 0.2s ease-out;
+                }
+                @keyframes slideDown {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .dropdown-header {
+                    padding: 16px;
+                    border-bottom: 1px solid var(--border-color);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .dropdown-header h3 {
+                    font-size: 0.9375rem;
+                    font-weight: 700;
+                    margin: 0;
+                    color: #0f172a;
+                }
+                .clear-btn {
+                    background: transparent;
+                    border: none;
+                    color: var(--primary);
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                }
+                .dropdown-body {
+                    max-height: 280px;
+                    overflow-y: auto;
+                }
+                .notification-item {
+                    display: flex;
+                    gap: 12px;
+                    padding: 16px;
+                    border-bottom: 1px solid #f1f5f9;
+                    transition: background 0.2s;
+                }
+                .notification-item:hover {
+                    background: #f8fafc;
+                }
+                .notification-icon {
+                    width: 28px;
+                    height: 28px;
+                    background: #eff6ff;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+                .notification-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+                .notification-item-title {
+                    font-size: 0.8125rem;
+                    font-weight: 700;
+                    margin: 0;
+                    color: #0f172a;
+                }
+                .notification-item-msg {
+                    font-size: 0.8125rem;
+                    color: #475569;
+                    margin: 0;
+                    line-height: 1.4;
+                }
+                .notification-item-time {
+                    font-size: 0.6875rem;
+                    color: #94a3b8;
+                    margin-top: 4px;
+                }
+                .no-notifications {
+                    padding: 32px 16px;
+                    text-align: center;
+                    color: var(--text-muted);
+                    font-size: 0.875rem;
                 }
 
                 .user-profile {
@@ -201,4 +370,4 @@ export default function Header({username, onLogout}) {
             `}</style>
         </header>
     )
-}
+}

@@ -2,14 +2,15 @@ import Aside from "../components/aside"
 import Header from "../components/header"
 import { useEffect, useState } from "react"
 import { Get, Post, Delete, Put } from "../api/api"
-import { Edit2, Trash2, User, Mail } from "lucide-react";
+import { Edit2, Trash2, User, Mail, Phone } from "lucide-react";
 
-export default function AjouterParticipant({ user, onLogout }) {
-    const [participants, setParticipants] = useState([]);
+export default function AjouterAnimateur({ user, onLogout }) {
+    const [animators, setAnimators] = useState([]);
     const [formData, setFormData] = useState({
         nom: "",
         prenom: "",
         email: "",
+        telephone: "",
         password: ""
     });
     const [editingId, setEditingId] = useState(null);
@@ -17,16 +18,16 @@ export default function AjouterParticipant({ user, onLogout }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchParticipants();
+        fetchAnimators();
     }, []);
 
-    const fetchParticipants = async () => {
+    const fetchAnimators = async () => {
         setLoading(true);
         try {
-            const res = await Get('participents');
-            setParticipants(res.data.participents || res.data.data || res.data || []);
+            const res = await Get('animators');
+            setAnimators(res.data.animators || res.data.data || res.data || []);
         } catch (err) {
-            console.error("Error fetching participants:", err);
+            console.error("Error fetching animators:", err);
         } finally {
             setLoading(false);
         }
@@ -43,78 +44,79 @@ export default function AjouterParticipant({ user, onLogout }) {
         e.preventDefault();
         setError("");
 
-        if (!formData.nom || !formData.prenom || !formData.email || (!editingId && !formData.password)) {
+        if (!formData.nom || !formData.prenom || !formData.email || !formData.telephone || (!editingId && !formData.password)) {
             setError("Tous les champs sont requis.");
             return;
         }
 
         try {
             if (editingId) {
-                await Put(`participents/${editingId}`, formData);
+                await Put(`animators/${editingId}`, formData);
             } else {
-                await Post('participents', formData);
+                await Post('animators', formData);
             }
-            setFormData({ nom: "", prenom: "", email: "", password: "" });
+            setFormData({ nom: "", prenom: "", email: "", telephone: "", password: "" });
             setEditingId(null);
-            fetchParticipants();
+            fetchAnimators();
         } catch (err) {
-            console.error("Error saving participant:", err);
+            console.error("Error saving animator:", err);
             if (err.response && err.response.data && err.response.data.errors) {
                 const errorMessages = Object.values(err.response.data.errors).flat().join(" ");
                 setError(errorMessages);
             } else if (err.response && err.response.data && err.response.data.message) {
                 setError(err.response.data.message);
             } else {
-                setError("Échec de l'enregistrement du participant. Veuillez vérifier vos données.");
+                setError("Échec de l'enregistrement du formateur. Veuillez vérifier vos données.");
             }
         }
     };
 
-    const handleEdit = (p) => {
-        setEditingId(p.id);
+    const handleEdit = (a) => {
+        setEditingId(a.id);
         setFormData({
-            nom: p.nom,
-            prenom: p.prenom,
-            email: p.email,
+            nom: a.nom,
+            prenom: a.prenom,
+            email: a.email,
+            telephone: a.telephone,
             password: ""
         });
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm("Supprimer ce participant ?")) {
+        if (window.confirm("Supprimer ce formateur ?")) {
             try {
-                await Delete(`participents/${id}`);
-                fetchParticipants();
+                await Delete(`animators/${id}`);
+                fetchAnimators();
             } catch (err) {
-                console.error("Error deleting participant:", err);
+                console.error("Error deleting animator:", err);
             }
         }
     };
 
     return (
         <div className="dashboard-layout">
-            <Header onLogout={onLogout} user={user} />
+            <Header onLogout={onLogout} username={user?.username} />
             <Aside user={user} />
 
             <main className="main">
                 {loading ? (
                     <div className="loading-state">
                         <div className="spinner"></div>
-                        <p>Chargement des participants...</p>
+                        <p>Chargement des formateurs...</p>
                     </div>
                 ) : (
                     <>
                         <header className="page-header">
                             <div>
-                                <h1 className="page-title">Gestion des Participants</h1>
-                                <p className="page-subtitle">Inscrivez et gérez les participants aux formations.</p>
+                                <h1 className="page-title">Gestion des Formateurs</h1>
+                                <p className="page-subtitle">Ajoutez et gérez les formateurs de l'établissement.</p>
                             </div>
                         </header>
 
                         <div className="content-grid">
                             <div className="form-card modest-card">
                                 <h3 className="section-title">
-                                    {editingId ? "Modifier le Participant" : "Ajouter un Nouveau Participant"}
+                                    {editingId ? "Modifier le Formateur" : "Ajouter un Nouveau Formateur"}
                                 </h3>
 
                                 <form onSubmit={handleSubmit} className="modest-form">
@@ -126,7 +128,7 @@ export default function AjouterParticipant({ user, onLogout }) {
                                                 name="prenom"
                                                 value={formData.prenom}
                                                 onChange={handleChange}
-                                                placeholder="John"
+                                                placeholder="Jean"
                                                 className="modest-input"
                                             />
                                         </div>
@@ -137,12 +139,13 @@ export default function AjouterParticipant({ user, onLogout }) {
                                                 name="nom"
                                                 value={formData.nom}
                                                 onChange={handleChange}
-                                                placeholder="Doe"
+                                                placeholder="Dupont"
                                                 className="modest-input"
                                             />
                                         </div>
                                     </div>
 
+                                    <div className="form-row">
                                         <div className="form-group">
                                             <label><Mail size={14} style={{ marginRight: '6px' }} /> Adresse Email</label>
                                             <input
@@ -150,21 +153,34 @@ export default function AjouterParticipant({ user, onLogout }) {
                                                 name="email"
                                                 value={formData.email}
                                                 onChange={handleChange}
-                                                placeholder="john.doe@example.com"
+                                                placeholder="jean.dupont@example.com"
                                                 className="modest-input"
                                             />
                                         </div>
                                         <div className="form-group">
-                                            <label><User size={14} style={{ marginRight: '6px' }} /> Mot de passe {editingId && "(Laisser vide pour ne pas modifier)"}</label>
+                                            <label><Phone size={14} style={{ marginRight: '6px' }} /> Téléphone</label>
                                             <input
-                                                type="password"
-                                                name="password"
-                                                value={formData.password}
+                                                type="text"
+                                                name="telephone"
+                                                value={formData.telephone}
                                                 onChange={handleChange}
-                                                placeholder="••••••••"
+                                                placeholder="+33 6 12 34 56 78"
                                                 className="modest-input"
                                             />
                                         </div>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label><User size={14} style={{ marginRight: '6px' }} /> Mot de passe {editingId && "(Laisser vide pour ne pas modifier)"}</label>
+                                        <input
+                                            type="password"
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            placeholder="••••••••"
+                                            className="modest-input"
+                                        />
+                                    </div>
 
                                     {error && <div className="error-box">{error}</div>}
 
@@ -173,40 +189,42 @@ export default function AjouterParticipant({ user, onLogout }) {
                                             <button
                                                 type="button"
                                                 className="secondary-btn"
-                                                onClick={() => { setEditingId(null); setFormData({ nom: "", prenom: "", email: "", password: "" }); }}
+                                                onClick={() => { setEditingId(null); setFormData({ nom: "", prenom: "", email: "", telephone: "", password: "" }); }}
                                             >
                                                 Annuler
                                             </button>
                                         )}
                                         <button type="submit" className="primary-btn">
-                                            {editingId ? "Mettre à jour le Participant" : "Ajouter le Participant"}
+                                            {editingId ? "Mettre à jour le Formateur" : "Ajouter le Formateur"}
                                         </button>
                                     </div>
                                 </form>
                             </div>
 
                             <div className="table-card modest-card">
-                                <h3 className="section-title">Participants Inscrits</h3>
+                                <h3 className="section-title">Formateurs Enregistrés</h3>
                                 <div className="table-wrapper">
                                     <table>
                                         <thead>
                                             <tr>
                                                 <th>Nom</th>
                                                 <th>Email</th>
+                                                <th>Téléphone</th>
                                                 <th className="text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {participants.length > 0 ? participants.map((p) => (
-                                                <tr key={p.id}>
-                                                    <td className="fw-semibold">{p.prenom} {p.nom}</td>
-                                                    <td className="text-muted">{p.email}</td>
+                                            {animators.length > 0 ? animators.map((a) => (
+                                                <tr key={a.id}>
+                                                    <td className="fw-semibold">{a.prenom} {a.nom}</td>
+                                                    <td className="text-muted">{a.email}</td>
+                                                    <td>{a.telephone}</td>
                                                     <td className="text-right">
                                                         <div className="action-group">
-                                                             <button className="icon-btn edit" onClick={() => handleEdit(p)} title="Modifier">
+                                                             <button className="icon-btn edit" onClick={() => handleEdit(a)} title="Modifier">
                                                                  <IconEdit />
                                                              </button>
-                                                             <button className="icon-btn delete" onClick={() => handleDelete(p.id)} title="Supprimer">
+                                                             <button className="icon-btn delete" onClick={() => handleDelete(a.id)} title="Supprimer">
                                                                  <IconTrash />
                                                              </button>
                                                         </div>
@@ -214,7 +232,7 @@ export default function AjouterParticipant({ user, onLogout }) {
                                                 </tr>
                                             )) : (
                                                 <tr>
-                                                    <td colSpan="3" className="empty-row">Aucun participant inscrit pour le moment.</td>
+                                                    <td colSpan="4" className="empty-row">Aucun formateur inscrit pour le moment.</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -384,4 +402,3 @@ export default function AjouterParticipant({ user, onLogout }) {
 
 const IconEdit = () => <Edit2 size={16} stroke="#64748b" />;
 const IconTrash = () => <Trash2 size={16} stroke="#64748b" />;
-

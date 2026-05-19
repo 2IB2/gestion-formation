@@ -69,10 +69,10 @@ export default function Login({ onLogin }) {
                     </div>
                     <h1>
                         {loginType === 'admin' ? 'Espace Administrateur' : 
-                         loginType === 'trainer' ? 'Espace Formateur' : 
+                         loginType === 'trainer' ? 'Espace Animateur' : 
                          'Accès Client'}
                     </h1>
-                    <p>Entrez vos identifiants pour accéder à votre espace {loginType === 'admin' ? 'administrateur' : loginType === 'trainer' ? 'formateur' : 'client'}</p>
+                    <p>Entrez vos identifiants pour accéder à votre espace {loginType === 'admin' ? 'administrateur' : loginType === 'trainer' ? 'animateur' : 'client'}</p>
                 </div>
 
                 <div className="login-tabs">
@@ -86,7 +86,7 @@ export default function Login({ onLogin }) {
                         className={`tab-btn ${loginType === 'trainer' ? 'active' : ''}`}
                         onClick={() => { setLoginType('trainer'); setError(""); }}
                     >
-                        Espace Formateur
+                        Espace Animateur
                     </button>
                     <button 
                         className={`tab-btn ${loginType === 'client' ? 'active' : ''}`}
@@ -106,7 +106,7 @@ export default function Login({ onLogin }) {
                                 type="text"
                                 placeholder={
                                     loginType === 'admin' ? "ex. admin" : 
-                                    loginType === 'trainer' ? "ex. formateur" : 
+                                    loginType === 'trainer' ? "ex. animateur" : 
                                     "ex. client@exemple.com"
                                 }
                                 value={username}
@@ -166,7 +166,7 @@ export default function Login({ onLogin }) {
                                 <LogIn size={18} style={{marginRight: '10px'}} />
                                 <span>
                                     {loginType === 'admin' ? 'Connexion Administrateur' : 
-                                     loginType === 'trainer' ? 'Connexion Formateur' : 
+                                     loginType === 'trainer' ? 'Connexion Animateur' : 
                                      'Connexion Client'}
                                 </span>
                             </>

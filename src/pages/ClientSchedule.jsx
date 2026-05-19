@@ -16,8 +16,9 @@ export default function ClientSchedule({ user, onLogout }) {
                 const res = await Get('assignments');
                 const all = res.data.assignments || res.data.data || res.data || [];
                 
-                // Filtering based on username match (mock logic)
+                // Filtering based on username match and participant ID
                 const filtered = all.filter(a => 
+                    a.participent_id === user?.participent?.id ||
                     a.nom?.toLowerCase() === user?.username?.toLowerCase() || 
                     a.prenom?.toLowerCase() === user?.username?.toLowerCase()
                 );
@@ -34,7 +35,7 @@ export default function ClientSchedule({ user, onLogout }) {
 
     return (
         <div className="dashboard-layout">
-            <Header onLogout={onLogout} username={user?.username} />
+            <Header onLogout={onLogout} user={user} />
             <Aside user={user} />
 
             <main className="main">
@@ -81,7 +82,7 @@ export default function ClientSchedule({ user, onLogout }) {
                                                 <h3>{item.formation_title || "Session de Formation"}</h3>
                                                 <div className="item-meta">
                                                     <span><Clock size={14} /> Heure de Session : 09:00 - 17:00</span>
-                                                    <span><BookOpen size={14} /> Formateur : {item.animateur || 'Formateur Assigné'}</span>
+                                                    <span><BookOpen size={14} /> Animateur : {item.animateur || 'Animateur Assigné'}</span>
                                                 </div>
                                             </div>
                                         </div>

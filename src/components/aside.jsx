@@ -72,6 +72,14 @@ export default function Aside({ user }) {
                             </NavLink>
 
                             <NavLink 
+                                to="/add-trainer"
+                                className={({isActive}) => `menu-item ${isActive ? "active" : ""}`}
+                            >
+                                <UserPlus size={20} className="item-icon" />
+                                <span>Animateurs</span>
+                            </NavLink>
+
+                            <NavLink 
                                 to="/affecter-participant"
                                 className={({isActive}) => `menu-item ${isActive ? "active" : ""}`}
                             >
@@ -91,7 +99,7 @@ export default function Aside({ user }) {
 
                     {isTrainer && (
                         <div className="menu-group">
-                            <span className="menu-label">Espace Formateur</span>
+                            <span className="menu-label">Espace Animateur</span>
                             <NavLink 
                                 to="/absences"
                                 className={({isActive}) => `menu-item ${isActive ? "active" : ""}`}
