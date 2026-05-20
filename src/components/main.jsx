@@ -21,6 +21,7 @@ export default function Main({ user, className }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [expandedFormationId, setExpandedFormationId] = useState(null);
+    const [selectedFormation, setSelectedFormation] = useState(null);
     const tableRef = useRef(null);
 
     const [stats, setStats] = useState({
@@ -207,6 +208,13 @@ export default function Main({ user, className }) {
         fetchData();
     }, [user]);
 
+    // Auto-select first formation when data loads
+    useEffect(() => {
+        if (formations.length > 0 && !selectedFormation) {
+            setSelectedFormation(formations[0]);
+        }
+    }, [formations]);
+
     const assignmentsByFormation = useMemo(() => {
         return assignments.reduce((acc, item) => {
             if (!acc[item.formation_id]) {
@@ -391,98 +399,105 @@ export default function Main({ user, className }) {
                         </>
                     )}
 
-                    {isTrainer && (
-                        <>
-                            <div className="wide-card premium-card">
-                                <div className="card-header-flex">
-                                    <h3 className="section-title">
-                                        <Clock size={20} />
-                                        Prochaine
-                                        Session
-                                    </h3>
-
-                                    <NavLink
-                                        to="/absences"
-                                        className="action-link"
-                                    >
-                                        Gérer les
-                                        Absences
-                                        <ArrowRight size={16} />
-                                    </NavLink>
-                                </div>
-
-                                <div className="session-info-box">
-                                    <div className="session-details">
-                                        <h4>
-                                            {formations[0]?.title || "Aucune Session"}
-                                        </h4>
-
-                                        <p>
-                                            <Calendar size={14} />
-                                            {formations[0]?.date_debut
-                                                ? `${formations[0].date_debut} → ${formations[0].date_fin}`
-                                                : "Date non définie"}
-                                        </p>
-
-                                        <p>
-                                            <Users size={14} />
-                                            {assignmentsByFormation[formations[0]?.id]?.length || 0} Participant(s)
-                                        </p>
-
-                                        {Array.isArray(formations[0]?.animateurs) && formations[0].animateurs.length > 0 && (
-                                            <p className="animateurs-pill-row">
-                                                {formations[0].animateurs.map((a, i) => (
-                                                    <span key={a.id || i} className="animateur-pill">
-                                                        {a.prenom} {a.nom}
-                                                    </span>
-                                                ))}
-                                            </p>
-                                        )}
+                    {isTrainer && (() => {
+                        const sf = selectedFormation || formations[0];
+                        return (
+                            <>
+                                {/* SESSION DETAIL CARD */}
+                                <div className="wide-card premium-card">
+                                    <div className="card-header-flex">
+                                        <h3 className="section-title">
+                                            <Clock size={20} />
+                                            Session Sélectionnée
+                                        </h3>
+                                        <NavLink to="/absences" className="action-link">
+                                            Gérer les Absences <ArrowRight size={16} />
+                                        </NavLink>
                                     </div>
 
-                                    <button
-                                        className="primary-btn-sm"
-                                        onClick={() => {
-                                            const firstId = formations[0]?.id;
-                                            setExpandedFormationId(firstId);
-                                            setTimeout(() => {
-                                                tableRef.current?.scrollIntoView({
-                                                    behavior: "smooth",
-                                                    block: "start",
-                                                });
-                                            }, 80);
-                                        }}
-                                    >
-                                        Voir la liste ↓
-                                    </button>
+                                    {sf ? (
+                                        <div className="session-info-box">
+                                            <div className="session-details">
+                                                <h4>{sf.title}</h4>
+                                                <p>
+                                                    <Calendar size={14} />
+                                                    {sf.date_debut
+                                                        ? `${sf.date_debut} → ${sf.date_fin}`
+                                                        : "Date non définie"}
+                                                </p>
+                                                <p>
+                                                    <Users size={14} />
+                                                    {assignmentsByFormation[sf.id]?.length || 0} Participant(s)
+                                                </p>
+                                                {Array.isArray(sf.animateurs) && sf.animateurs.length > 0 && (
+                                                    <p className="animateurs-pill-row">
+                                                        {sf.animateurs.map((a, i) => (
+                                                            <span key={a.id || i} className="animateur-pill">
+                                                                {a.prenom} {a.nom}
+                                                            </span>
+                                                        ))}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <button
+                                                className="primary-btn-sm"
+                                                onClick={() => {
+                                                    setExpandedFormationId(sf.id);
+                                                    setTimeout(() => {
+                                                        tableRef.current?.scrollIntoView({
+                                                            behavior: "smooth",
+                                                            block: "start",
+                                                        });
+                                                    }, 80);
+                                                }}
+                                            >
+                                                Voir la liste ↓
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="empty-section-state" style={{ margin: '16px 0' }}>
+                                            Aucune formation assignée.
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
 
-                            <div className="stat-card premium-card">
-                                <div className="card-icon indigo">
-                                    <ClipboardList size={24} />
+                                {/* MES FORMATIONS LIST CARD */}
+                                <div className="stat-card premium-card trainer-formations-card">
+                                    <div className="card-header-flex" style={{ marginBottom: 14 }}>
+                                        <span className="label" style={{ fontSize: '0.8rem' }}>
+                                            MES FORMATIONS ({formations.length})
+                                        </span>
+                                    </div>
+                                    <div className="trainer-formation-list">
+                                        {formations.length > 0 ? formations.map((f) => {
+                                            const isSelected = (sf?.id === f.id);
+                                            return (
+                                                <div
+                                                    key={f.id}
+                                                    className={`trainer-formation-item${isSelected ? ' selected' : ''}`}
+                                                    onClick={() => {
+                                                        setSelectedFormation(f);
+                                                        setExpandedFormationId(f.id);
+                                                        setTimeout(() => {
+                                                            tableRef.current?.scrollIntoView({
+                                                                behavior: "smooth",
+                                                                block: "start",
+                                                            });
+                                                        }, 80);
+                                                    }}
+                                                >
+                                                    <span className="tfi-title">{f.title}</span>
+                                                    <span className="tfi-date">{f.date_debut || '—'}</span>
+                                                </div>
+                                            );
+                                        }) : (
+                                            <div className="empty-section-state">Aucune formation.</div>
+                                        )}
+                                    </div>
                                 </div>
-
-                                <div className="card-info">
-                                    <span className="label">
-                                        Mes
-                                        Formations
-                                    </span>
-
-                                    <h2 className="value">
-                                        {
-                                            formations.length
-                                        }
-                                    </h2>
-
-                                    <span className="trend neutral">
-                                        Responsable
-                                        actuel
-                                    </span>
-                                </div>
-                            </div>
-                        </>
-                    )}
+                            </>
+                        );
+                    })()}
 
                     {isClient && (
                         <>
@@ -556,7 +571,7 @@ export default function Main({ user, className }) {
                         </>
                     )}
 
-                    <div className="recent-table-card premium-card full-width">
+                    <div ref={tableRef} className="recent-table-card premium-card full-width">
                         <div className="recent-header">
                             <h3>
                                 {isAdmin
@@ -972,6 +987,90 @@ export default function Main({ user, className }) {
                     gap: 8px;
                     margin: 6px 0;
                     color: #64748b;
+                }
+
+                .animateurs-pill-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 6px;
+                    margin-top: 10px !important;
+                }
+
+                .animateur-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    background: #eef2ff;
+                    color: #4f46e5;
+                    border: 1px solid #c7d2fe;
+                    padding: 3px 10px;
+                    border-radius: 999px;
+                    font-size: 0.78rem;
+                    font-weight: 600;
+                }
+
+                .trainer-formations-card {
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                }
+
+                .trainer-formation-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    max-height: 220px;
+                    overflow-y: auto;
+                    padding-right: 4px;
+                }
+
+                .trainer-formation-list::-webkit-scrollbar {
+                    width: 4px;
+                }
+
+                .trainer-formation-list::-webkit-scrollbar-thumb {
+                    background: #c7d2fe;
+                    border-radius: 999px;
+                }
+
+                .trainer-formation-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 10px 14px;
+                    border-radius: 10px;
+                    border: 1px solid #e2e8f0;
+                    cursor: pointer;
+                    transition: all 0.18s ease;
+                    background: #f8fafc;
+                }
+
+                .trainer-formation-item:hover {
+                    border-color: #6366f1;
+                    background: #eef2ff;
+                    transform: translateX(2px);
+                }
+
+                .trainer-formation-item.selected {
+                    border-color: #6366f1;
+                    background: #eef2ff;
+                    box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+                }
+
+                .tfi-title {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: #1e293b;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 70%;
+                }
+
+                .tfi-date {
+                    font-size: 0.75rem;
+                    color: #64748b;
+                    white-space: nowrap;
                 }
 
                 .primary-btn-sm {

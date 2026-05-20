@@ -21,9 +21,9 @@ export default function TrainerAbsences({ user, onLogout }) {
                     Get('formations'),
                     Get('pivot')
                 ]);
-                console.log("FORMATIONS RES:", formationsRes?.data);
-                console.log("PIVOTS RES:", pivotsRes?.data);
-                console.log("USER ID:", user?.id);
+                // console.log("FORMATIONS RES:", formationsRes?.data);
+                // console.log("PIVOTS RES:", pivotsRes?.data);
+                // console.log("USER ID:", user?.id);
 
                 const allFormations = formationsRes?.data?.formations || formationsRes?.data?.data || formationsRes?.data || [];
                 const allPivots = pivotsRes?.data?.pivots || pivotsRes?.data?.data || pivotsRes?.data || [];

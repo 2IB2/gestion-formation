@@ -58,49 +58,122 @@ export default function ListeFormation({
             date_fin: "",
         });
 
+    // useEffect(() => {
+    //     fetchFormations();
+    // }, []);
+
+    // const normalizeData = (data, key) => {
+    //     return data?.[key] || data?.data || data || [];
+    // };
+
+    //     const fetchFormations = async () => {
+    //     try {
+    //         setLoading(true);
+    //         setError(null);
+
+    //         const [formationsRes, pivotsRes] = await Promise.all([
+    //             Get("formations"),
+    //             Get("pivot"),
+    //         ]);
+
+    //         const allFormations =
+    //             formationsRes?.data?.formations ||
+    //             formationsRes?.data?.data ||
+    //             formationsRes?.data ||
+    //             [];
+
+    //         const allPivots =
+    //             pivotsRes?.data?.pivots ||
+    //             pivotsRes?.data?.data ||
+    //             pivotsRes?.data ||
+    //             [];
+
+    //         let filtered = allFormations;
+
+    //         // =========================
+    //         // ✅ IMPORTANT FIX HERE
+    //         // =========================
+    //         if (user?.role === "animateur") {
+    //             const trainerId =
+    //                 user?.animater?.id || user?.id;
+
+    //             const myFormationIds = allPivots
+    //                 .filter(
+    //                     (p) =>
+    //                         Number(p.animater_id) ===
+    //                         Number(trainerId)
+    //                 )
+    //                 .map((p) => p.formation_id);
+
+    //             filtered = allFormations.filter((f) =>
+    //                 myFormationIds.includes(f.id)
+    //             );
+    //         }
+
+    //         setData(filtered);
+    //     } catch (err) {
+    //         console.error(err);
+    //         setError("Erreur lors du chargement des formations.");
+    //         setData([]);
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
     useEffect(() => {
+        const fetchFormations = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const [formationsRes, pivotsRes] = await Promise.all([
+                    Get("formations"),
+                    Get("pivot"),
+                ]);
+
+                const allFormations =
+                    formationsRes?.data?.formations ||
+                    formationsRes?.data?.data ||
+                    formationsRes?.data ||
+                    [];
+
+                const allPivots =
+                    pivotsRes?.data?.pivots ||
+                    pivotsRes?.data?.data ||
+                    pivotsRes?.data ||
+                    [];
+
+                let filtered = allFormations;
+
+                // 🔥 ONLY FILTER FOR ANIMATEUR
+                const trainerId =
+                    user?.animater?.id || user?.id;
+
+                const myFormationIds = allPivots
+                    .filter(p =>
+                        Number(p.animater_id) === Number(trainerId)
+                    )
+                    .map(p => p.formation_id);
+
+                if (myFormationIds.length > 0) {
+                    filtered = allFormations.filter(f =>
+                        myFormationIds.includes(f.id)
+                    );
+                }
+
+                setData(filtered);
+
+            } catch (err) {
+                console.error(err);
+                setError("Erreur lors du chargement des formations.");
+                setData([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         fetchFormations();
-    }, []);
-
-    const normalizeData = (data, key) => {
-        return data?.[key] || data?.data || data || [];
-    };
-
-    const fetchFormations = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const res = await Get(
-                "formations"
-            );
-
-            const formations =
-                normalizeData(
-                    res.data,
-                    "formations"
-                );
-
-            setData(
-                Array.isArray(
-                    formations
-                )
-                    ? formations
-                    : []
-            );
-        } catch (err) {
-            console.error(err);
-
-            setError(
-                "Erreur lors du chargement des formations."
-            );
-
-            setData([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    }, [user]);
     const handleChange = (e) => {
         setNewFormation({
             ...newFormation,
@@ -362,26 +435,18 @@ export default function ListeFormation({
                                 </p>
                             </div>
 
-                            <button
-                                className="add-btn-primary"
-                                onClick={() => {
-                                    setShowForm(
-                                        true
-                                    );
-
-                                    setEditingIndex(
-                                        null
-                                    );
-                                }}
-                            >
-                                <Plus
-                                    size={
-                                        18
-                                    }
-                                />
-                                Créer une
-                                Formation
-                            </button>
+                            {user?.role == "animateur" || user?.role == "client" && (
+                                <button
+                                    className="add-btn-primary"
+                                    onClick={() => {
+                                        setShowForm(true);
+                                        setEditingIndex(null);
+                                    }}
+                                >
+                                    <Plus size={18} />
+                                    Créer une Formation
+                                </button>
+                            )}
                         </header>
 
                         <div className="stats-grid">
@@ -515,7 +580,7 @@ export default function ListeFormation({
 
                         <div className="row">
                             {filteredFormations.length >
-                            0 ? (
+                                0 ? (
                                 filteredFormations.map(
                                     (
                                         formation,
@@ -587,7 +652,7 @@ export default function ListeFormation({
                                 <div>
                                     <h2>
                                         {editingIndex !==
-                                        null
+                                            null
                                             ? "Modifier la Formation"
                                             : "Nouvelle Formation"}
                                     </h2>
@@ -758,9 +823,9 @@ export default function ListeFormation({
                                         {saving
                                             ? "Enregistrement..."
                                             : editingIndex !==
-                                              null
-                                            ? "Mettre à jour"
-                                            : "Créer"}
+                                                null
+                                                ? "Mettre à jour"
+                                                : "Créer"}
                                     </button>
                                 </div>
                             </div>

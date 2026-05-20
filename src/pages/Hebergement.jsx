@@ -23,36 +23,39 @@ export default function Hebergement({ user, onLogout }) {
     const isAdmin = user?.role === 'admin' || !user?.role;
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            await Promise.allSettled([
-                fetchHebergements(),
-                isAdmin ? fetchParticipants() : Promise.resolve()
-            ]);
-            setLoading(false);
-        };
-        load();
-    }, [user]);
-
-    const fetchHebergements = async () => {
-        try {
-            const res = await Get('hebergements');
-            const allData = res.data?.hebergements || res.data?.data || res.data || [];
-
-            if (!isAdmin) {
-                const myData = allData.filter(h => {
-                    const p = h.participant || h.participent;
-                    return p?.id === user?.id;
-                });
-                setHebergements(myData);
-            } else {
-                setHebergements(Array.isArray(allData) ? allData : []);
-            }
-        } catch (err) {
-            console.error("Error fetching hebergements:", err);
-        }
+    const load = async () => {
+        setLoading(true);
+        if (isAdmin) await fetchParticipants();
+        await fetchHebergements();
+        const partRes = await Get(`participents`);
+        
+        setLoading(false);
     };
+    load();
+}, [user]);
 
+   const fetchHebergements = async () => {
+    try {
+        const res = await Get('hebergements');
+        const allData = res.data?.hebergements || res.data?.data || res.data || [];
+        console.log("HEBERGEMENT:", allData[0]);
+        if (!isAdmin) {
+            // ✅ Match by email
+            const partRes = await Get('participents');
+            const partData = partRes.data?.participents || partRes.data?.data || partRes.data || [];
+            
+            const myParticipent = partData.find(p => p.email === user?.email);
+            console.log("MY PARTICIPENT:", myParticipent);
+            
+            const myData = allData.filter(h => h.participent_id === myParticipent?.id);
+            setHebergements(myData);
+        } else {
+            setHebergements(Array.isArray(allData) ? allData : []);
+        }
+    } catch (err) {
+        console.error("Error fetching hebergements:", err);
+    }
+};
     const fetchParticipants = async () => {
         try {
             const res = await Get('participents');
@@ -212,7 +215,7 @@ export default function Hebergement({ user, onLogout }) {
                                                     className="modest-input"
                                                 />
                                             </div>
-                                             <div className="form-group">
+                                            <div className="form-group">
                                                 <label><DollarSign size={14} style={{marginRight: '6px'}} /> Prix (DH)</label>
                                                 <input
                                                     type="number"
@@ -262,7 +265,7 @@ export default function Hebergement({ user, onLogout }) {
                                         </thead>
                                         <tbody>
                                             {hebergements.length > 0 ? hebergements.map((h) => {
-                                                const p = h.participant || h.participent;
+                                                const p = h.participant;
                                                 return (
                                                     <tr key={h.id}>
                                                         <td className="fw-semibold">

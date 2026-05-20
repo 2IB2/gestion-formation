@@ -12,7 +12,6 @@ import AffecterParticipant from "../pages/AffecterParticipant";
 import Hebergement from "../pages/Hebergement";
 import ClientSchedule from "../pages/ClientSchedule";
 import TrainerAbsences from "../pages/TrainerAbsences";
-
 export default function Board() {
 
     const [user, setUser] = useState(null);
@@ -140,4 +139,4 @@ export default function Board() {
             </Routes>
         </BrowserRouter>
     );
-}
+}
